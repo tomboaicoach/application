@@ -1,0 +1,2574 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Teacher's Weekly Planner (Standalone)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Outfit:wght@300;400;500;600&display=swap"
+    rel="stylesheet">
+
+  <style>
+    /* -------------------------------------------------------
+       CSS Variables & Global Styles
+    ------------------------------------------------------- */
+    :root {
+      --bg-primary: #f8f6f3;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #edeae5;
+      --text-primary: #2d3436;
+      --text-secondary: #636e72;
+      --text-muted: #b2bec3;
+
+      --accent-primary: #4a6fa5;
+      --accent-secondary: #6b8cae;
+      --accent-light: #e8eef5;
+
+      --border-color: #ddd9d2;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+
+      /* Categories */
+      --cat-class: #7eb8a2;
+      --cat-meeting: #d4a574;
+      --cat-admin: #9b8dc4;
+      --cat-private: #e8a5a5;
+      --cat-default: #8faabe;
+
+      --danger: #e74c3c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Outfit', 'Noto Sans JP', sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+      overflow-y: auto;
+      /* App-like feel */
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Scrollbar Customization */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-tertiary);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #b0b8c0;
+      border-radius: 4px;
+    }
+
+    /* Darker for visibility */
+    ::-webkit-scrollbar-thumb:hover {
+      background: #9098a0;
+    }
+
+    /* Icons (Using emoji for simplicity as per requirements, or minimal svgs if needed. Using Emoji in buttons as requested) */
+
+    /* -------------------------------------------------------
+       Layout Structure
+    ------------------------------------------------------- */
+    header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow-sm);
+      z-index: 10;
+      flex-shrink: 0;
+      /* Prevent header shrink */
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .header-center {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--accent-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .nav-btn {
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 0.4rem 0.8rem;
+      cursor: pointer;
+      color: var(--text-primary);
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .nav-btn:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .nav-btn.today {
+      background: var(--accent-light);
+      color: var(--accent-primary);
+      border-color: var(--accent-primary);
+      font-weight: 600;
+    }
+
+    .nav-btn.add-event-btn {
+      background: var(--accent-primary);
+      color: white;
+      border-color: var(--accent-primary);
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .nav-btn.add-event-btn:hover {
+      background: var(--accent-secondary);
+    }
+
+    .date-display {
+      font-size: 1.1rem;
+      font-weight: 500;
+      min-width: 120px;
+      text-align: center;
+    }
+
+    /* Floating Action Button - hidden on desktop */
+    .fab-add-event {
+      display: none;
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      display: flex;
+      overflow: visible;
+      min-height: 0;
+      /* Flexbox scroll fix */
+    }
+
+    /* Schedule Grid Area */
+    .schedule-container {
+      flex: 1;
+      overflow: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      /* Flexbox scroll fix */
+    }
+
+    .schedule-grid {
+      display: grid;
+      /* Grid params will be set by JS dynamically based on 5 or 7 days */
+      grid-template-columns: 80px repeat(5, 1fr);
+      gap: 0;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+
+    .cell {
+      background: var(--bg-secondary);
+      min-height: 65px;
+      /* Slightly reduced height to fit more */
+      position: relative;
+      padding: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      border-right: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .cell:last-child {
+      border-right: none;
+    }
+
+    .cell.header {
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      font-weight: 600;
+      text-align: center;
+      padding: 10px;
+      min-height: auto;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .cell.header.today-header {
+      /* Today styling is handled via .date-badge inside */
+      background: var(--bg-primary);
+    }
+
+    .date-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      margin-left: 6px;
+    }
+
+    .today-header .date-badge {
+      background: var(--accent-primary);
+      color: white;
+    }
+
+    .cell.time-label {
+      background: var(--bg-primary);
+      justify-content: center;
+      align-items: center;
+      font-size: 0.9rem;
+      border-right: 1px solid var(--border-color);
+    }
+
+    .label-name {
+      font-weight: bold;
+    }
+
+    .label-time {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .cell.weekend {
+      background-color: #faf5f5;
+    }
+
+    /* Events */
+    .event-card {
+      background: var(--cat-default);
+      color: white;
+      padding: 4px 6px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      transition: transform 0.1s;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .event-card:hover {
+      transform: scale(1.02);
+      z-index: 2;
+    }
+
+    .event-card.cat-class {
+      background-color: var(--cat-class);
+    }
+
+    .event-card.cat-meeting {
+      background-color: var(--cat-meeting);
+    }
+
+    .event-card.cat-admin {
+      background-color: var(--cat-admin);
+    }
+
+    .event-card.cat-private {
+      background-color: var(--cat-private);
+    }
+
+    /* Multiline event styles */
+    .event-card.multi-start {
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+      margin-bottom: 0;
+    }
+
+    .event-card.multi-mid {
+      border-radius: 0;
+      margin-top: 0;
+      margin-bottom: 0;
+      opacity: 0.7;
+    }
+
+    .event-card.multi-end {
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+      margin-top: 0;
+    }
+
+    .timetable-badge {
+      background: rgba(126, 184, 162, 0.2);
+      color: #2d5a4c;
+      font-size: 0.75rem;
+      padding: 2px 4px;
+      border-radius: 3px;
+      margin-bottom: 2px;
+      border-left: 3px solid var(--cat-class);
+    }
+
+    /* Drag and Drop */
+    .event-card.dragging {
+      opacity: 0.5;
+      transform: scale(0.95);
+    }
+
+    .cell.drag-over {
+      background-color: var(--accent-light) !important;
+      outline: 2px dashed var(--accent-primary);
+      outline-offset: -2px;
+    }
+
+    /* Context Menu */
+    .context-menu {
+      position: fixed;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-md);
+      z-index: 200;
+      min-width: 120px;
+      padding: 4px 0;
+      display: none;
+    }
+
+    .context-menu.visible {
+      display: block;
+    }
+
+    .context-menu-item {
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .context-menu-item:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .context-menu-item.danger {
+      color: var(--danger);
+    }
+
+    .context-menu-item.danger:hover {
+      background: rgba(231, 76, 60, 0.1);
+    }
+
+    /* ToDo Panel */
+    .todo-panel {
+      width: 300px;
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      z-index: 5;
+    }
+
+    .todo-header {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border-color);
+      font-weight: 600;
+      color: var(--accent-primary);
+    }
+
+    .todo-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+    }
+
+    .todo-input-area {
+      padding: 1rem;
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-primary);
+    }
+
+    .todo-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--bg-tertiary);
+      animation: fadeIn 0.3s ease;
+    }
+
+    .todo-checkbox {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--text-muted);
+      border-radius: 50%;
+      cursor: pointer;
+      flex-shrink: 0;
+      margin-top: 2px;
+      display: grid;
+      place-items: center;
+    }
+
+    .todo-checkbox.checked {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+    }
+
+    .todo-checkbox.checked::after {
+      content: '✓';
+      color: white;
+      font-size: 12px;
+    }
+
+    .todo-text-wrap {
+      flex: 1;
+    }
+
+    .todo-text {
+      width: 100%;
+      border: none;
+      background: transparent;
+      font-family: inherit;
+      font-size: 0.95rem;
+      resize: none;
+      outline: none;
+    }
+
+    .todo-item.done .todo-text {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .todo-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .deadline-badge {
+      background: var(--bg-tertiary);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .deadline-badge.overdue {
+      color: var(--danger);
+      background: rgba(231, 76, 60, 0.1);
+      border: 1px solid var(--danger);
+    }
+
+    .todo-remove {
+      color: var(--text-muted);
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .todo-item:hover .todo-remove {
+      opacity: 1;
+    }
+
+    /* Modals */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal {
+      background: var(--bg-secondary);
+      width: 90%;
+      max-width: 500px;
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-lg);
+      transform: translateY(20px);
+      transition: transform 0.3s ease;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-overlay.open .modal {
+      transform: translateY(0);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .modal-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .close-btn {
+      font-size: 1.5rem;
+      cursor: pointer;
+      background: none;
+      border: none;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 0.6rem;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 1rem;
+    }
+
+    .form-control:focus {
+      outline: 2px solid var(--accent-secondary);
+      border-color: transparent;
+    }
+
+    /* Settings Tabs */
+    .settings-tab,
+    .timetable-day {
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .settings-tab.active,
+    .timetable-day.active {
+      background: var(--accent-primary);
+      color: white;
+      border-color: var(--accent-primary);
+    }
+
+    .settings-tab:hover:not(.active),
+    .timetable-day:hover:not(.active) {
+      background: var(--bg-tertiary);
+    }
+
+    .category-select {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .cat-option {
+      padding: 0.4rem 0.8rem;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+
+    .cat-option.selected {
+      border-color: transparent;
+      color: white;
+      font-weight: 600;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+
+    .btn {
+      padding: 0.6rem 1.2rem;
+      border-radius: var(--radius-sm);
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .btn-primary {
+      background: var(--accent-primary);
+      color: white;
+    }
+
+    .btn-danger {
+      background: rgba(231, 76, 60, 0.1);
+      color: var(--danger);
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      body {
+        overflow: auto;
+      }
+
+      main {
+        flex-direction: column;
+        overflow: visible;
+        height: auto;
+      }
+
+      .schedule-container {
+        overflow: visible;
+        height: auto;
+      }
+
+      .todo-panel {
+        width: 100%;
+        max-height: 200px;
+        min-height: 120px;
+        border-left: none;
+        border-top: 1px solid var(--border-color);
+      }
+
+      .todo-panel.expanded {
+        max-height: 400px;
+      }
+
+      .todo-header {
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 1rem;
+      }
+
+      .todo-header::after {
+        content: '▼';
+        font-size: 0.8em;
+        opacity: 0.5;
+      }
+
+      .todo-panel.expanded .todo-header::after {
+        content: '▲';
+      }
+
+      .todo-content {
+        max-height: 80px;
+        overflow-y: auto;
+        padding: 0.5rem;
+      }
+
+      .todo-panel.expanded .todo-content {
+        max-height: 200px;
+      }
+
+      .todo-input-area {
+        padding: 0.5rem;
+      }
+
+      .todo-item {
+        padding: 4px 0;
+        font-size: 0.85rem;
+      }
+
+      .cell {
+        min-height: 45px;
+      }
+
+      .event-card {
+        font-size: 0.7rem;
+        padding: 2px 4px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .header-left .nav-btn span {
+        display: none;
+      }
+
+      /* hide text on small screens */
+      h1 span {
+        display: none;
+      }
+
+      h1::after {
+        content: 'Planner';
+      }
+
+      /* Allow horizontal and vertical scroll when needed */
+      main {
+        overflow: auto;
+      }
+
+      .schedule-container {
+        overflow: auto;
+        max-height: calc(100vh - 150px);
+      }
+
+      .schedule-grid {
+        font-size: 0.7rem;
+        grid-template-columns: 40px repeat(var(--col-count, 5), minmax(50px, 1fr));
+        min-width: fit-content;
+      }
+
+      .cell {
+        min-height: 35px;
+        padding: 1px;
+      }
+
+      .cell.header {
+        padding: 4px 1px;
+      }
+
+      .date-badge {
+        width: 16px;
+        height: 16px;
+        font-size: 0.65rem;
+        margin-left: 1px;
+      }
+
+      .label-name {
+        font-size: 0.65rem;
+      }
+
+      .label-time {
+        font-size: 0.5rem;
+        display: block;
+      }
+
+      /* Event card mobile improvements */
+      .event-card {
+        font-size: 0.6rem;
+        padding: 2px 3px;
+        white-space: normal;
+        word-break: break-word;
+        line-height: 1.2;
+        max-height: 40px;
+        overflow: hidden;
+      }
+
+      /* Timetable badge mobile */
+      .timetable-badge {
+        font-size: 0.55rem;
+        padding: 2px 3px;
+        white-space: normal;
+        word-break: break-word;
+        line-height: 1.1;
+      }
+
+      .todo-panel {
+        max-height: 150px;
+      }
+
+      .todo-panel.expanded {
+        max-height: 300px;
+      }
+
+      /* Hide header add button on mobile */
+      .nav-btn.add-event-btn {
+        display: none;
+      }
+
+      /* Floating Action Button - visible on mobile */
+      .fab-add-event {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: fixed;
+        bottom: 80px;
+        right: 16px;
+        width: 50px;
+        height: 50px;
+        background: var(--accent-primary);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        font-size: 1.5rem;
+        font-weight: bold;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        cursor: pointer;
+        z-index: 100;
+      }
+
+      .fab-add-event:active {
+        transform: scale(0.95);
+      }
+    }
+
+    /* Animation Keyframes */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(5px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="header-left">
+      <h1>📅 <span>週間プランナー</span></h1>
+    </div>
+    <div class="header-center">
+      <button class="nav-btn" onclick="app.navWeek(-1)">◀</button>
+      <button class="nav-btn" onclick="app.navToday()">今日</button>
+      <button class="nav-btn" onclick="app.navWeek(1)">▶</button>
+      <span class="date-display" id="currentWeekDisplay">Loading...</span>
+      <button class="nav-btn add-event-btn" onclick="app.openEventModal(null, app.formatDate(new Date()), '')"
+        title="新規予定">＋</button>
+    </div>
+    <div class="header-right">
+      <button class="nav-btn" onclick="app.toggleWeekend()" id="weekendToggle">土日</button>
+      <button class="nav-btn" onclick="app.openSettings()">⚙</button>
+      <!-- Export/Import could be in settings or distinct buttons. Simple ones here -->
+      <button class="nav-btn" onclick="app.exportData()">↓</button>
+      <button class="nav-btn" onclick="document.getElementById('importFile').click()">↑</button>
+      <input type="file" id="importFile" style="display:none" onchange="app.importData(this)">
+    </div>
+  </header>
+
+  <!-- Floating Add Button (mobile only) -->
+  <button class="fab-add-event" onclick="app.openEventModal(null, app.formatDate(new Date()), '')"
+    title="新規予定">＋</button>
+
+  <!-- Main Content -->
+  <main>
+    <div class="schedule-container">
+      <div class="schedule-grid" id="scheduleGrid">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <div class="todo-panel" id="todoPanel">
+      <div class="todo-header" onclick="document.getElementById('todoPanel').classList.toggle('expanded')">📝 ToDo List
+      </div>
+      <div class="todo-content" id="todoList">
+        <!-- Rendered by JS -->
+      </div>
+      <div class="todo-input-area">
+        <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
+          <input type="text" id="newTodoInput" class="form-control" placeholder="新しいタスクを入力..."
+            onkeypress="if(event.key==='Enter') app.addTodo()">
+          <button class="btn btn-primary" onclick="app.addTodo()">+</button>
+        </div>
+        <div style="display:flex; gap:0.5rem;">
+          <input type="date" id="newTodoDeadlineDate" class="form-control" style="font-size:0.8rem; flex:1;">
+          <input type="time" id="newTodoDeadlineTime" class="form-control" style="font-size:0.8rem; width:80px;"
+            placeholder="--:--">
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Event Modal -->
+  <div class="modal-overlay" id="eventModalOverlay" onclick="if(event.target===this) app.closeEventModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="eventModalTitle">予定を追加</h2>
+        <button class="close-btn" onclick="app.closeEventModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="eventId">
+
+        <div class="form-group">
+          <label class="form-label">タイトル *</label>
+          <input type="text" id="eventTitle" class="form-control" required>
+        </div>
+
+        <div class="form-group" style="display:flex; gap:1rem;">
+          <div style="flex:1;">
+            <label class="form-label">日付 *</label>
+            <input type="date" id="eventDate" class="form-control" required onchange="app.onDateChange()">
+          </div>
+          <div style="flex:1;">
+            <label class="form-label">時限</label>
+            <select id="eventPeriod" class="form-control" onchange="app.onPeriodSelect()">
+              <option value="">指定なし</option>
+              <!-- Filled by JS -->
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="display:flex; gap:1rem;">
+          <div style="flex:1;">
+            <label class="form-label">開始</label>
+            <input type="time" id="eventStart" class="form-control">
+          </div>
+          <div style="flex:1;">
+            <label class="form-label">終了</label>
+            <input type="time" id="eventEnd" class="form-control">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">カテゴリ</label>
+          <div class="category-select" id="categorySelect">
+            <div class="cat-option" data-val="class" style="background: var(--cat-class)">授業</div>
+            <div class="cat-option" data-val="meeting" style="background: var(--cat-meeting)">会議</div>
+            <div class="cat-option" data-val="admin" style="background: var(--cat-admin)">校務</div>
+            <div class="cat-option" data-val="private" style="background: var(--cat-private)">私用</div>
+            <div class="cat-option" data-val="default" style="background: var(--cat-default)">その他</div>
+          </div>
+          <input type="hidden" id="eventCategory" value="default">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">メモ</label>
+          <textarea id="eventMemo" class="form-control" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-danger" id="eventDeleteBtn" style="display:none;" onclick="app.deleteEvent()">削除</button>
+        <button class="btn btn-secondary" onclick="app.closeEventModal()">キャンセル</button>
+        <button class="btn btn-primary" onclick="app.saveEvent()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settingsModalOverlay" onclick="if(event.target===this) app.closeSettingsModal()">
+    <div class="modal" style="max-width:700px;">
+      <div class="modal-header">
+        <h2 class="modal-title">設定</h2>
+        <button class="close-btn" onclick="app.closeSettingsModal()">×</button>
+      </div>
+      <div class="modal-body" style="max-height:65vh; overflow-y:auto;">
+
+        <!-- Tab Navigation -->
+        <div
+          style="display:flex; gap:0.5rem; margin-bottom:1rem; border-bottom:1px solid var(--border-color); padding-bottom:0.5rem;">
+          <button class="btn settings-tab active" data-tab="periods" onclick="app.switchSettingsTab('periods')">⏰
+            時限</button>
+          <button class="btn settings-tab" data-tab="terms" onclick="app.switchSettingsTab('terms')">📅 期間</button>
+          <button class="btn settings-tab" data-tab="timetable" onclick="app.switchSettingsTab('timetable')">📚
+            時間割</button>
+        </div>
+
+        <!-- Period Settings Tab -->
+        <div id="settingsTabPeriods" class="settings-tab-content">
+          <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1rem;">各時限の名前と時間を編集できます</p>
+
+          <div id="periodSettingsList" style="display:flex; flex-direction:column; gap:0.5rem;">
+            <!-- Rendered by JS -->
+          </div>
+
+          <button class="btn btn-secondary" style="margin-top:0.5rem; font-size:0.85rem;" onclick="app.addNewPeriod()">
+            + 時限を追加
+          </button>
+        </div>
+
+        <!-- Terms Settings Tab -->
+        <div id="settingsTabTerms" class="settings-tab-content" style="display:none;">
+          <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1rem;">学期や期間を設定し、その期間の時間割を管理できます</p>
+
+          <div id="termsSettingsList" style="display:flex; flex-direction:column; gap:0.5rem;">
+            <!-- Rendered by JS -->
+          </div>
+
+          <button class="btn btn-secondary" style="margin-top:0.5rem; font-size:0.85rem;" onclick="app.addNewTerm()">
+            + 期間を追加
+          </button>
+        </div>
+
+        <!-- Timetable Settings Tab -->
+        <div id="settingsTabTimetable" class="settings-tab-content" style="display:none;">
+          <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1rem;">期間・曜日ごとの定期授業を設定します</p>
+
+          <!-- Term selector -->
+          <div style="margin-bottom:1rem;">
+            <label style="font-size:0.8rem; margin-right:0.5rem;">期間:</label>
+            <select id="timetableTermSelect" class="form-control"
+              style="width:auto; display:inline-block; font-size:0.85rem;" onchange="app.switchTimetableTerm()">
+              <!-- Options rendered by JS -->
+            </select>
+          </div>
+
+          <!-- Day selector -->
+          <div style="display:flex; gap:0.25rem; margin-bottom:1rem;">
+            <button class="btn timetable-day active" data-day="0" onclick="app.switchTimetableDay(0)">月</button>
+            <button class="btn timetable-day" data-day="1" onclick="app.switchTimetableDay(1)">火</button>
+            <button class="btn timetable-day" data-day="2" onclick="app.switchTimetableDay(2)">水</button>
+            <button class="btn timetable-day" data-day="3" onclick="app.switchTimetableDay(3)">木</button>
+            <button class="btn timetable-day" data-day="4" onclick="app.switchTimetableDay(4)">金</button>
+          </div>
+
+          <div id="timetableSettingsList" style="display:flex; flex-direction:column; gap:0.5rem;">
+            <!-- Rendered by JS -->
+          </div>
+
+          <button class="btn btn-danger" style="margin-top:1rem; font-size:0.85rem;" onclick="app.clearAllTimetable()">
+            🗑️ この期間の時間割を全て削除
+          </button>
+        </div>
+
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="app.closeSettingsModal()">キャンセル</button>
+        <button class="btn btn-primary" onclick="app.saveSettings()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Context Menu -->
+  <div class="context-menu" id="eventContextMenu">
+    <div class="context-menu-item" onclick="app.contextMenuEdit()">
+      <span>✏️</span> 編集
+    </div>
+    <div class="context-menu-item danger" onclick="app.contextMenuDelete()">
+      <span>🗑️</span> 削除
+    </div>
+  </div>
+
+  <script>
+    // ----------------------------------------------------------------
+    // Application Logic
+    // ----------------------------------------------------------------
+    const app = {
+      state: {
+        currentDate: new Date(),
+        showWeekend: false,
+        periods: [],
+        events: [],
+        todos: [],
+        timetablePeriods: [],
+        terms: [], // 学期/期間 (e.g., { id, name, startDate, endDate })
+        // Drag and Drop
+        draggedEvent: null,
+        draggedTimetable: null,
+        // Context Menu
+        contextMenuEvent: null,
+        longPressTimer: null
+      },
+
+      // ----------------  LocalStorage Key ---------------- //
+      STORAGE_KEY: 'teacherPlannerData',
+
+      // Default periods for new users
+      getDefaultPeriods: function () {
+        return [
+          { id: 'before', name: '始業前', start: '07:30', end: '08:20' },
+          { id: 'st', name: 'ST', start: '08:20', end: '08:35' },
+          { id: 'p1', name: '1限', start: '08:45', end: '09:35' },
+          { id: 'p2', name: '2限', start: '09:45', end: '10:35' },
+          { id: 'p3', name: '3限', start: '10:45', end: '11:35' },
+          { id: 'p4', name: '4限', start: '11:45', end: '12:35' },
+          { id: 'lunch', name: '昼休み', start: '12:35', end: '13:20' },
+          { id: 'p5', name: '5限', start: '13:25', end: '14:15' },
+          { id: 'p6', name: '6限', start: '14:25', end: '15:15' },
+          { id: 'after', name: '放課後', start: '15:25', end: '18:00' }
+        ];
+      },
+
+      init: function () {
+        console.log('App Initializing (Standalone Mode)...');
+        this.renderLoading();
+
+        // Load data from localStorage
+        const saved = localStorage.getItem(this.STORAGE_KEY);
+        if (saved) {
+          try {
+            const data = JSON.parse(saved);
+            this.onDataLoaded(data);
+          } catch (e) {
+            console.error('Failed to parse saved data:', e);
+            this.loadDefaultData();
+          }
+        } else {
+          this.loadDefaultData();
+        }
+      },
+
+      loadDefaultData: function () {
+        const defaultData = {
+          events: [],
+          todos: [],
+          periods: this.getDefaultPeriods(),
+          terms: [],
+          timetablePeriods: [],
+          settings: []
+        };
+        this.onDataLoaded(defaultData);
+      },
+
+      saveToLocalStorage: function () {
+        const data = {
+          events: this.state.events,
+          todos: this.state.todos,
+          periods: this.state.periods,
+          terms: this.state.terms,
+          timetablePeriods: this.state.timetablePeriods,
+          settings: [{ key: 'showWeekend', value: String(this.state.showWeekend) }]
+        };
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+      },
+
+      renderLoading: function () {
+        document.getElementById('currentWeekDisplay').innerText = 'Loading...';
+      },
+
+      onDataLoaded: function (data) {
+        console.log('Data Loaded', data);
+        this.state.events = data.events || [];
+        this.state.todos = (data.todos || []).map((t, i) => ({ ...t, order: t.order || i }));
+        this.state.periods = data.periods || this.getDefaultPeriods();
+        this.state.terms = data.terms || [];
+        this.state.timetablePeriods = data.timetablePeriods || [];
+
+        const weekendSetting = (data.settings || []).find(s => s.key === 'showWeekend');
+        if (weekendSetting) this.state.showWeekend = (weekendSetting.value === 'true');
+
+        this.renderAll();
+        this.setupUI();
+      },
+
+      onDataError: function (err) {
+        alert('エラーが発生しました: ' + err.message);
+      },
+
+      setupUI: function () {
+        const opts = document.querySelectorAll('.cat-option');
+        opts.forEach(opt => {
+          opt.onclick = () => {
+            opts.forEach(o => o.classList.remove('selected'));
+            opt.classList.add('selected');
+            document.getElementById('eventCategory').value = opt.dataset.val;
+          };
+        });
+      },
+
+      renderAll: function () {
+        this.renderHeader();
+        this.renderGrid();
+        this.renderTodos();
+      },
+
+      // ---------------- Week Navigation ---------------- //
+
+      navWeek: function (delta) {
+        this.state.currentDate.setDate(this.state.currentDate.getDate() + (delta * 7));
+        this.renderHeader();
+        this.renderGrid();
+      },
+
+      navToday: function () {
+        this.state.currentDate = new Date();
+        this.renderHeader();
+        this.renderGrid();
+      },
+
+      toggleWeekend: function () {
+        this.state.showWeekend = !this.state.showWeekend;
+        this.saveToLocalStorage();
+
+        let ben = document.getElementById('weekendToggle');
+        if (this.state.showWeekend) ben.style.background = 'var(--bg-tertiary)';
+        else ben.style.background = '';
+
+        this.renderGrid();
+      },
+
+      getWeekRange: function () {
+        const d = new Date(this.state.currentDate);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day == 0 ? -6 : 1);
+        const monday = new Date(d.setDate(diff));
+        return monday;
+      },
+
+      renderHeader: function () {
+        const start = this.getWeekRange();
+        const end = new Date(start);
+        end.setDate(end.getDate() + 6);
+
+        const fmt = (d) => `${d.getMonth() + 1}/${d.getDate()}`;
+        document.getElementById('currentWeekDisplay').innerText = `${fmt(start)} – ${fmt(end)}`;
+      },
+
+      // ---------------- Grid Rendering ---------------- //
+
+      renderGrid: function () {
+        const grid = document.getElementById('scheduleGrid');
+        grid.innerHTML = '';
+
+        const periods = this.state.periods;
+        const colCount = this.state.showWeekend ? 7 : 5;
+
+        grid.style.setProperty('--col-count', colCount);
+        grid.style.gridTemplateColumns = `80px repeat(${colCount}, 1fr)`;
+
+        // Header Row
+        const corner = document.createElement('div');
+        corner.className = 'cell header';
+        grid.appendChild(corner);
+
+        const startOfWeek = this.getWeekRange();
+        const weekDays = ['月', '火', '水', '木', '金', '土', '日'];
+        const todayStr = new Date().toDateString();
+
+        for (let i = 0; i < colCount; i++) {
+          const d = new Date(startOfWeek);
+          d.setDate(d.getDate() + i);
+
+          const cell = document.createElement('div');
+          cell.className = 'cell header';
+          if (i >= 5) cell.classList.add('weekend');
+          if (d.toDateString() === todayStr) cell.classList.add('today-header');
+
+          cell.innerHTML = `<div>${weekDays[i]} <span class="date-badge">${d.getDate()}</span></div>`;
+          grid.appendChild(cell);
+        }
+
+        // Rows
+        periods.forEach((period, pIndex) => {
+          // Label
+          const label = document.createElement('div');
+          label.className = 'cell time-label';
+          const startStr = this.formatPeriodTime(period.start);
+          const endStr = this.formatPeriodTime(period.end);
+          label.innerHTML = `<div class="label-name">${period.name}</div><div class="label-time">${startStr}-${endStr}</div>`;
+          grid.appendChild(label);
+
+          // Cells
+          for (let i = 0; i < colCount; i++) {
+            const d = new Date(startOfWeek);
+            d.setDate(d.getDate() + i);
+            const dateStr = this.formatDate(d); // YYYY-MM-DD
+
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.dataset.date = dateStr;
+            cell.dataset.periodId = period.id;
+
+            cell.onclick = (e) => {
+              if (e.target === cell) {
+                this.hideContextMenu();
+                this.openEventModal(null, dateStr, period.id);
+              }
+            };
+
+            // Drag and Drop handlers for cells
+            cell.ondragover = (e) => {
+              e.preventDefault();
+              cell.classList.add('drag-over');
+            };
+
+            cell.ondragleave = () => {
+              cell.classList.remove('drag-over');
+            };
+
+            cell.ondrop = (e) => {
+              e.preventDefault();
+              cell.classList.remove('drag-over');
+              if (this.state.draggedEvent) {
+                this.moveEvent(this.state.draggedEvent, dateStr, period.id, period);
+              } else if (this.state.draggedTimetable) {
+                // Create an override event at the new location
+                const dt = this.state.draggedTimetable;
+                this.createTimetableOverrideAt(dt.entry, dateStr, period.id, period, dt.originalDate, dt.originalPeriodId);
+              }
+            };
+
+            if (i >= 5) cell.classList.add('weekend');
+
+            this.renderTimetableBadge(cell, dateStr, i, period.id);
+            this.renderEventsInCell(cell, dateStr, period, i, pIndex);
+
+            grid.appendChild(cell);
+          }
+        });
+      },
+
+      formatPeriodTime: function (val) {
+        if (!val) return '';
+        if (typeof val === 'string' && val.match(/^\d{1,2}:\d{2}$/)) return val;
+        const d = new Date(val);
+        if (isNaN(d.getTime())) return val;
+        const h = d.getHours().toString().padStart(2, '0');
+        const m = d.getMinutes().toString().padStart(2, '0');
+        return `${h}:${m}`;
+      },
+
+      renderTimetableBadge: function (cell, dateStr, dayIndex, periodId) {
+        // Find the active term for this date
+        const targetDate = this.parseDateLocal(dateStr);
+        if (!targetDate) return;
+
+        const activeTerm = this.state.terms.find(term => {
+          if (!term.startDate || !term.endDate) return false;
+          const start = this.parseDateLocal(term.startDate);
+          const end = this.parseDateLocal(term.endDate);
+          if (!start || !end) return false;
+          end.setHours(23, 59, 59, 999);
+          return targetDate >= start && targetDate <= end;
+        });
+
+        if (!activeTerm) return;
+
+        // Find timetable entry for this term, period, and day
+        const entry = this.state.timetablePeriods.find(t =>
+          t.termId === activeTerm.id &&
+          t.periodId === periodId &&
+          parseInt(t.dayOfWeek) === dayIndex
+        );
+
+        // Check if there's already an event override for this slot
+        const period = this.state.periods.find(p => p.id === periodId);
+        const hasOverride = this.state.events.some(e =>
+          e.date === dateStr &&
+          e.periodId === periodId &&
+          e.fromTimetable === true
+        );
+
+        if (hasOverride) return; // Don't show badge if overridden by event
+
+        if (entry && entry.subject) {
+          const badge = document.createElement('div');
+          badge.className = 'timetable-badge';
+          badge.draggable = true;
+          badge.style.cursor = 'grab';
+
+          let text = entry.subject;
+          if (entry.className) {
+            text += ` (${entry.className})`;
+          }
+          badge.innerText = text;
+
+          // Click to create an override event
+          badge.onclick = (e) => {
+            e.stopPropagation();
+            this.createTimetableOverride(entry, dateStr, periodId, period);
+          };
+
+          // Drag start
+          badge.ondragstart = (e) => {
+            e.stopPropagation();
+            badge.style.opacity = '0.5';
+            this.state.draggedTimetable = {
+              entry: entry,
+              originalDate: dateStr,
+              originalPeriodId: periodId,
+              period: period
+            };
+          };
+
+          badge.ondragend = () => {
+            badge.style.opacity = '1';
+            this.state.draggedTimetable = null;
+          };
+
+          cell.appendChild(badge);
+        }
+      },
+
+      // Create an event from a timetable entry (for overriding/moving)
+      createTimetableOverride: function (entry, dateStr, periodId, period) {
+        if (!confirm(`「${entry.subject}」をこの日のイベントとして編集しますか？\n（時間割から切り離され、個別に移動・編集できるようになります）`)) {
+          return;
+        }
+
+        const newEvent = {
+          id: this.generateId(),
+          title: entry.subject + (entry.className ? ` (${entry.className})` : ''),
+          date: dateStr,
+          periodId: periodId,
+          startTime: period ? period.start : '',
+          endTime: period ? period.end : '',
+          category: 'class',
+          memo: '',
+          fromTimetable: true, // Flag to hide the original badge
+          createdAt: new Date().toISOString()
+        };
+
+        this.state.events.push(newEvent);
+        this.saveToLocalStorage();
+        this.renderGrid();
+      },
+
+      // Create an override at a specific drop location (for drag-and-drop)
+      createTimetableOverrideAt: function (entry, newDateStr, newPeriodId, newPeriod, origDateStr, origPeriodId) {
+        // Create the moved event at new location
+        const movedEvent = {
+          id: this.generateId(),
+          title: entry.subject + (entry.className ? ` (${entry.className})` : ''),
+          date: newDateStr,
+          periodId: newPeriodId,
+          startTime: newPeriod ? newPeriod.start : '',
+          endTime: newPeriod ? newPeriod.end : '',
+          category: 'class',
+          memo: '時間割から移動',
+          fromTimetable: true,
+          createdAt: new Date().toISOString()
+        };
+
+        this.state.events.push(movedEvent);
+        this.saveToLocalStorage();
+
+        // Create a "cancelled" placeholder at original location
+        const cancelledEvent = {
+          id: this.generateId(),
+          title: '（時間割変更）',
+          date: origDateStr,
+          periodId: origPeriodId,
+          startTime: '',
+          endTime: '',
+          category: 'other',
+          memo: `${entry.subject} は ${newDateStr} に移動`,
+          fromTimetable: true,
+          createdAt: new Date().toISOString()
+        };
+
+        this.state.events.push(cancelledEvent);
+        this.saveToLocalStorage();
+
+        this.renderGrid();
+      },
+
+      renderEventsInCell: function (cell, dateStr, period, dayIndex, pIndex) {
+        // Find events that SHOULD display in this cell.
+        // Logic:
+        // 1. Event starts in this period on this date
+        // 2. Event started in a PREVIOUS period but currently spans into this one
+
+        // Helper to convert time string "HH:mm" or ISO date to minutes from midnight
+        // Returns null if empty/invalid
+        const toMins = (t) => {
+          if (!t) return null;
+          if (t instanceof Date) return t.getHours() * 60 + t.getMinutes();
+
+          // Handle ISO date string (e.g., "2026-01-12T07:30:00.000Z")
+          if (typeof t === 'string' && t.includes('T')) {
+            const d = new Date(t);
+            if (!isNaN(d.getTime())) {
+              return d.getHours() * 60 + d.getMinutes();
+            }
+          }
+
+          // Handle "HH:mm" format
+          if (typeof t === 'string' && t.match(/^\d{1,2}:\d{2}$/)) {
+            const p = t.split(':');
+            return parseInt(p[0]) * 60 + parseInt(p[1]);
+          }
+
+          return null;
+        };
+
+        let currentPeriodStart = toMins(period.start);
+        let currentPeriodEnd = toMins(period.end);
+
+        // Safety for invalid period times
+        if (currentPeriodStart === null) currentPeriodStart = 0;
+        if (currentPeriodEnd === null) currentPeriodEnd = 1440;
+
+        // Gap Filling: Extend this period's "visual end" to the start of the next period
+        // so events in the break are attached to the previous block.
+        let captureEnd = currentPeriodEnd;
+        if (this.state.periods[pIndex + 1]) {
+          const nextStart = toMins(this.state.periods[pIndex + 1].start);
+          if (nextStart !== null && nextStart > captureEnd) {
+            captureEnd = nextStart;
+          }
+        }
+
+        this.state.events.forEach(ev => {
+          if (!ev.date.startsWith(dateStr)) return;
+
+          const evStart = toMins(ev.startTime);
+          const evEnd = toMins(ev.endTime);
+
+          // Check explicit periodId
+          let matchExplicit = false;
+          if (ev.periodId && ev.periodId === period.id) {
+            matchExplicit = true;
+          }
+
+          // Check "No Time" events (and No Period explicit)
+          // If event has no time and no period, show it in the FIRST period of the day (Header-like)
+          let matchNoTime = false;
+          if (!ev.periodId && evStart === null && evEnd === null) {
+            if (pIndex === 0) matchNoTime = true;
+          }
+
+          // Check Time Overlap (Implicit)
+          // Use captureEnd to include gaps
+          let matchTime = false;
+          if (evStart !== null && evEnd !== null) {
+            // Overlap logic: Start < CaptureEnd AND End > PeriodStart
+            if (evStart < captureEnd && evEnd > currentPeriodStart) {
+              matchTime = true;
+            }
+          }
+
+          // Display if matches any condition
+          if (matchExplicit || matchNoTime || matchTime) {
+            const div = document.createElement('div');
+            div.className = `event-card cat-${ev.category || 'default'}`;
+
+            // Determine if this is the starting block or a continuation
+            let isStartBlock = true;
+            if (matchTime && evStart !== null) {
+              // If the event started before this period's start, it's a continuation
+              if (evStart < currentPeriodStart) isStartBlock = false;
+            }
+
+            if (isStartBlock) {
+              // Start block: show title and time range
+              const titleSpan = document.createElement('div');
+              titleSpan.innerText = matchNoTime ? '📌 ' + ev.title : ev.title;
+              div.appendChild(titleSpan);
+
+              // Show time range if available
+              if (ev.startTime && ev.endTime) {
+                // Helper to format time to HH:mm
+                const formatTime = (t) => {
+                  if (!t) return '';
+                  // Handle ISO date string
+                  if (typeof t === 'string' && t.includes('T')) {
+                    const d = new Date(t);
+                    if (!isNaN(d.getTime())) {
+                      return d.getHours().toString().padStart(2, '0') + ':' +
+                        d.getMinutes().toString().padStart(2, '0');
+                    }
+                  }
+                  // Handle HH:mm format
+                  if (typeof t === 'string' && t.match(/^\d{1,2}:\d{2}$/)) {
+                    return t;
+                  }
+                  // Handle Date object
+                  if (t instanceof Date) {
+                    return t.getHours().toString().padStart(2, '0') + ':' +
+                      t.getMinutes().toString().padStart(2, '0');
+                  }
+                  return '';
+                };
+
+                const startStr = formatTime(ev.startTime);
+                const endStr = formatTime(ev.endTime);
+
+                if (startStr && endStr) {
+                  const timeSpan = document.createElement('div');
+                  timeSpan.style.fontSize = '0.75em';
+                  timeSpan.style.opacity = '0.9';
+                  timeSpan.style.marginTop = '2px';
+                  timeSpan.innerText = `${startStr} - ${endStr}`;
+                  div.appendChild(timeSpan);
+                }
+              }
+            } else {
+              // Continuation block: show arrow + title
+              div.innerHTML = `<span style="opacity:0.7; margin-right:4px">↓</span>${ev.title}`;
+              div.style.opacity = '0.8';
+            }
+
+            // Make draggable (only for start blocks to avoid confusion)
+            if (isStartBlock) {
+              div.draggable = true;
+              div.dataset.eventId = ev.id;
+
+              div.ondragstart = (e) => {
+                this.state.draggedEvent = ev;
+                div.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+              };
+
+              div.ondragend = () => {
+                div.classList.remove('dragging');
+                this.state.draggedEvent = null;
+                // Remove all drag-over highlights
+                document.querySelectorAll('.cell.drag-over').forEach(c => c.classList.remove('drag-over'));
+              };
+            }
+
+            // Click to edit
+            div.onclick = (e) => {
+              e.stopPropagation();
+              this.hideContextMenu();
+              this.openEventModal(ev);
+            };
+
+            // Right-click context menu (desktop)
+            div.oncontextmenu = (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              this.showContextMenu(e.clientX, e.clientY, ev);
+            };
+
+            // Long press for mobile
+            div.ontouchstart = (e) => {
+              this.state.longPressTimer = setTimeout(() => {
+                const touch = e.touches[0];
+                this.showContextMenu(touch.clientX, touch.clientY, ev);
+              }, 500);
+            };
+
+            div.ontouchend = () => {
+              clearTimeout(this.state.longPressTimer);
+            };
+
+            div.ontouchmove = () => {
+              clearTimeout(this.state.longPressTimer);
+            };
+
+            cell.appendChild(div);
+          }
+        });
+      },
+
+      // ---------------- Event CRUD ---------------- //
+
+      openEventModal: function (event, date = null, periodId = null) {
+        const overlay = document.getElementById('eventModalOverlay');
+        const title = document.getElementById('eventModalTitle');
+        const delBtn = document.getElementById('eventDeleteBtn');
+        const pSel = document.getElementById('eventPeriod');
+
+        pSel.innerHTML = '<option value="">指定なし</option>' +
+          this.state.periods.map(p => `<option value="${p.id}" data-start="${this.formatPeriodTime(p.start)}" data-end="${this.formatPeriodTime(p.end)}">${p.name}</option>`).join('');
+
+        const dInput = document.getElementById('eventDate');
+        const tInput = document.getElementById('eventTitle');
+        const startInput = document.getElementById('eventStart');
+        const endInput = document.getElementById('eventEnd');
+        const memoInput = document.getElementById('eventMemo');
+        const idInput = document.getElementById('eventId');
+        const catInput = document.getElementById('eventCategory');
+
+        document.querySelectorAll('.cat-option').forEach(o => o.classList.remove('selected'));
+
+        if (event) {
+          title.innerText = '予定を編集';
+          delBtn.style.display = 'block';
+          idInput.value = event.id;
+          tInput.value = event.title;
+          dInput.value = event.date.slice(0, 10);
+          pSel.value = event.periodId || '';
+          startInput.value = event.startTime;
+          endInput.value = event.endTime;
+          memoInput.value = event.memo;
+          catInput.value = event.category || 'default';
+
+          let cat = document.querySelector(`.cat-option[data-val="${catInput.value}"]`);
+          if (cat) cat.classList.add('selected');
+
+        } else {
+          title.innerText = '予定を追加';
+          delBtn.style.display = 'none';
+          idInput.value = '';
+          tInput.value = '';
+          dInput.value = date;
+          pSel.value = periodId || '';
+          memoInput.value = '';
+          catInput.value = 'default';
+          document.querySelector(`.cat-option[data-val="default"]`).classList.add('selected');
+
+          this.onPeriodSelect();
+        }
+
+        overlay.classList.add('open');
+      },
+
+      closeEventModal: function () {
+        document.getElementById('eventModalOverlay').classList.remove('open');
+      },
+
+      onPeriodSelect: function () {
+        const sel = document.getElementById('eventPeriod');
+        const opt = sel.options[sel.selectedIndex];
+        if (opt && opt.dataset.start) {
+          document.getElementById('eventStart').value = opt.dataset.start;
+          document.getElementById('eventEnd').value = opt.dataset.end;
+        }
+      },
+
+      saveEvent: function () {
+        const id = document.getElementById('eventId').value;
+        const eData = {
+          id: id || this.generateId(),
+          title: document.getElementById('eventTitle').value,
+          date: document.getElementById('eventDate').value,
+          periodId: document.getElementById('eventPeriod').value,
+          startTime: document.getElementById('eventStart').value,
+          endTime: document.getElementById('eventEnd').value,
+          category: document.getElementById('eventCategory').value,
+          memo: document.getElementById('eventMemo').value
+        };
+
+        if (!eData.title || !eData.date) {
+          alert('タイトルと日付は必須です');
+          return;
+        }
+
+        if (id) {
+          const idx = this.state.events.findIndex(e => e.id === id);
+          if (idx !== -1) this.state.events[idx] = eData;
+        } else {
+          this.state.events.push(eData);
+        }
+        this.renderGrid();
+        this.closeEventModal();
+
+        this.saveToLocalStorage();
+      },
+
+      deleteEvent: function () {
+        const id = document.getElementById('eventId').value;
+        if (!confirm('本当に削除しますか？')) return;
+        this.state.events = this.state.events.filter(e => e.id !== id);
+        this.renderGrid();
+        this.closeEventModal();
+        this.saveToLocalStorage();
+      },
+
+      // ---------------- Context Menu ---------------- //
+
+      showContextMenu: function (x, y, event) {
+        this.state.contextMenuEvent = event;
+        const menu = document.getElementById('eventContextMenu');
+        menu.style.left = x + 'px';
+        menu.style.top = y + 'px';
+        menu.classList.add('visible');
+
+        // Close on outside click
+        setTimeout(() => {
+          document.addEventListener('click', this.hideContextMenu.bind(this), { once: true });
+        }, 10);
+      },
+
+      hideContextMenu: function () {
+        document.getElementById('eventContextMenu').classList.remove('visible');
+        this.state.contextMenuEvent = null;
+      },
+
+      contextMenuEdit: function () {
+        if (this.state.contextMenuEvent) {
+          this.openEventModal(this.state.contextMenuEvent);
+        }
+        this.hideContextMenu();
+      },
+
+      contextMenuDelete: function () {
+        if (this.state.contextMenuEvent && confirm('この予定を削除しますか？')) {
+          const id = this.state.contextMenuEvent.id;
+          this.state.events = this.state.events.filter(e => e.id !== id);
+          this.renderGrid();
+          this.saveToLocalStorage();
+        }
+        this.hideContextMenu();
+      },
+
+      // ---------------- Drag and Drop ---------------- //
+
+      moveEvent: function (event, newDate, newPeriodId, period) {
+        // Only update the date - keep original times
+        event.date = newDate;
+        // Don't change periodId or times - let the time-based overlap logic handle display
+
+        // Update in state
+        const idx = this.state.events.findIndex(e => e.id === event.id);
+        if (idx !== -1) {
+          this.state.events[idx] = event;
+        }
+
+        this.renderGrid();
+        this.saveToLocalStorage();
+      },
+
+      // ---------------- ToDo Logic ---------------- //
+
+      renderTodos: function () {
+        const list = document.getElementById('todoList');
+        list.innerHTML = '';
+
+        // Sort by order property
+        const sorted = [...this.state.todos].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        sorted.forEach((todo, index) => {
+          const div = document.createElement('div');
+          div.className = `todo-item ${todo.done ? 'done' : ''}`;
+          div.draggable = true;
+          div.dataset.id = todo.id;
+          div.dataset.index = index; // for drag calc
+
+          // Drag Events
+          div.ondragstart = this.onTodoDragStart.bind(this);
+          div.ondragover = this.onTodoDragOver.bind(this);
+          div.ondrop = this.onTodoDrop.bind(this);
+
+          // Deadline
+          let deadlineHtml = '';
+          if (todo.deadline) {
+            const d = new Date(todo.deadline);
+            // Verify if valid date
+            if (!isNaN(d.getTime())) {
+              const now = new Date();
+
+              // Check if time is 00:00 (implies date only intent from input type="date")
+              // Or try to infer from format string if we stored it? 
+              // Currently we just compare timestamps. 
+              // If deadline passed: overdue.
+              // Reset 'now' to start of day if explicit date-only wanted? 
+              // For safety, accurate comparison.
+
+              const isOverdue = !todo.done && d < now;
+
+              // Format: If hours are 00:00, show Date only? 
+              // Input is now date, string will be YYYY-MM-DD. 
+              // New Date('YYYY-MM-DD') is UTC usually. Be careful.
+              // Let's assume input stores 'YYYY-MM-DD' string for date only.
+
+              const isDateOnly = todo.deadline.length === 10; // YYYY-MM-DD
+              let dateStr;
+
+              if (isDateOnly) {
+                dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
+                // Overdue check for date only: if deadline date is before today's date
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                /* Fix timezone offset issue for YYYY-MM-DD parsing */
+                const deadlineDate = new Date(todo.deadline + 'T00:00:00');
+                if (!todo.done && deadlineDate < today) deadlineHtml = `<span class="deadline-badge overdue">🚨 ${dateStr}</span>`;
+                else deadlineHtml = `<span class="deadline-badge">${dateStr}</span>`;
+              } else {
+                // Has time
+                dateStr = `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}`;
+                if (isOverdue) deadlineHtml = `<span class="deadline-badge overdue">🚨 ${dateStr}</span>`;
+                else deadlineHtml = `<span class="deadline-badge">${dateStr}</span>`;
+              }
+            }
+          }
+
+          // Extract date part for input (YYYY-MM-DD)
+          const deadlineDateVal = todo.deadline ? todo.deadline.substring(0, 10) : '';
+
+          div.innerHTML = `
+            <div class="todo-drag-handle" style="cursor:grab; opacity:0.3; padding:0 4px;">::</div>
+            <div class="todo-checkbox ${todo.done ? 'checked' : ''}" onclick="app.toggleTodo('${todo.id}')"></div>
+            <div class="todo-text-wrap">
+              <input type="text" class="todo-text" value="${todo.text}" onchange="app.updateTodoText('${todo.id}', this.value)">
+              <div class="todo-meta">
+                <input type="date" class="deadline-input" value="${deadlineDateVal}" 
+                       onblur="app.updateTodoDeadline('${todo.id}', this.value)"
+                       style="font-size:0.75rem; padding:2px 4px; border:1px solid var(--border-color); border-radius:4px; min-width:130px;">
+                ${deadlineHtml}
+                <span class="todo-remove" onclick="app.deleteTodo('${todo.id}')">× 削除</span>
+              </div>
+            </div>
+          `;
+          list.appendChild(div);
+        });
+      },
+
+      addTodo: function () {
+        const input = document.getElementById('newTodoInput');
+        const text = input.value.trim();
+        if (!text) return;
+
+        // Get separate date and time values
+        const dateVal = document.getElementById('newTodoDeadlineDate').value; // YYYY-MM-DD
+        const timeVal = document.getElementById('newTodoDeadlineTime').value; // HH:mm or empty
+
+        // Combine: if time is provided, use ISO format; otherwise just date
+        let deadline = '';
+        if (dateVal) {
+          if (timeVal) {
+            deadline = `${dateVal}T${timeVal}`;
+          } else {
+            deadline = dateVal; // Date only
+          }
+        }
+
+        // New items go to top
+        const minOrder = this.state.todos.reduce((min, t) => Math.min(min, t.order || 0), 0);
+
+        const newTodo = {
+          id: this.generateId(),
+          text: text,
+          done: false,
+          deadline: deadline,
+          order: minOrder - 1
+        };
+
+        this.state.todos.push(newTodo);
+        input.value = '';
+        document.getElementById('newTodoDeadlineDate').value = '';
+        document.getElementById('newTodoDeadlineTime').value = '';
+        this.renderTodos();
+
+        // Pass 'order' column update... 
+        // Backend Todo schema assumes fixed columns mostly? 
+        // We added 'order' to logic, need to ensure backend saves it?
+        // Wait, current backend saveTodo uses keys. It writes row based on header match. 
+        // Code.js default header for Todos was: ['id', 'text', 'done', 'deadline', 'createdAt', 'updatedAt']
+        // It does NOT have 'order'. We need to be careful or update Code.js headers? 
+        // User didn't ask to update backend schema explicitly, but it won't persist without it.
+        // I will assume for now frontend persistence is enough for 'session' or simple usage, 
+        // BUT to persist reorder, I should update backend schema properly next time.
+        // Actually, user experience will break if reload resets order.
+        // HACK: I will stick 'order' into 'createdAt' for sorting? No that's bad.
+        // I'll send it, and if backend ignores it, so be it. 
+        // **Critical**: User asked for reorder. It implies persistence. 
+        // I will trust existing helper saves what maps to header. 
+        // Since I can't easily change backend headers without reset setup(), 
+        // I will implement UI-only reordering for now or assume user can run logic update.
+        // For this step, I focus on UI.
+
+        this.saveToLocalStorage();
+      },
+
+      toggleTodo: function (id) {
+        const todo = this.state.todos.find(t => t.id === id);
+        if (todo) {
+          todo.done = !todo.done;
+          this.renderTodos();
+          this.saveToLocalStorage();
+        }
+      },
+
+      updateTodoText: function (id, newText) {
+        const todo = this.state.todos.find(t => t.id === id);
+        if (todo) {
+          todo.text = newText;
+          this.saveToLocalStorage();
+        }
+      },
+
+      updateTodoDeadline: function (id, newDeadline) {
+        const todo = this.state.todos.find(t => t.id === id);
+        if (todo) {
+          todo.deadline = newDeadline;
+          this.renderTodos(); // Re-render to update deadline badge display
+          this.saveToLocalStorage();
+        }
+      },
+
+      deleteTodo: function (id) {
+        if (!confirm('削除しますか？')) return;
+        this.state.todos = this.state.todos.filter(t => t.id !== id);
+        this.renderTodos();
+        this.saveToLocalStorage();
+      },
+
+      // --- Drag & Drop ---
+      onTodoDragStart: function (e) {
+        this.dragSrcEl = e.target.closest('.todo-item');
+        e.dataTransfer.effectAllowed = 'move';
+      },
+
+      onTodoDragOver: function (e) {
+        if (e.preventDefault) e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        return false;
+      },
+
+      onTodoDrop: function (e) {
+        if (e.stopPropagation) e.stopPropagation();
+        const dest = e.target.closest('.todo-item');
+        if (this.dragSrcEl !== dest && dest) {
+          const srcId = this.dragSrcEl.dataset.id;
+          const destId = dest.dataset.id;
+
+          // Reorder array
+          const srcIndex = this.state.todos.findIndex(t => t.id === srcId);
+          const destIndex = this.state.todos.findIndex(t => t.id === destId);
+
+          // Swap orders logic:
+          // Actually just move item in array and reassign index-based orders
+          const [moved] = this.state.todos.splice(srcIndex, 1);
+          this.state.todos.splice(destIndex, 0, moved);
+
+          // Reassign 'order' property to match new array index
+          // This is simple.
+          this.state.todos.forEach((t, i) => t.order = i);
+
+          this.renderTodos();
+
+          // Ideally save ALL orders. 
+          // For simple usage without massive API spam:
+          // Maybe just save these 2? No, shifts affect all between.
+          // Since we can't batch save easily without backend change, 
+          // We'll just do nothing backend-wise for ORDER yet, 
+          // OR we sadly loop. Let's loop for the modified subset provided list is small.
+          // Limit to 5 updates to avoid timeouts? 
+          // Actually, let's just log warning. 
+          // "Enable header 'order' in Sheet to persist sort."
+          // I'll silently update the moved items.
+          this.saveToLocalStorage();
+        }
+        return false;
+      },
+
+      // ---------------- Utilities ---------------- //
+
+      // Backup storage for cancel functionality
+      settingsBackup: null,
+
+      openSettings: function () {
+        // Create backup of current settings for cancel functionality
+        this.settingsBackup = {
+          periods: JSON.parse(JSON.stringify(this.state.periods)),
+          terms: JSON.parse(JSON.stringify(this.state.terms)),
+          timetablePeriods: JSON.parse(JSON.stringify(this.state.timetablePeriods))
+        };
+        this.renderPeriodSettings();
+        document.getElementById('settingsModalOverlay').classList.add('open');
+      },
+
+      closeSettingsModal: function () {
+        // Restore backup on cancel (revert all changes)
+        if (this.settingsBackup) {
+          this.state.periods = this.settingsBackup.periods;
+          this.state.terms = this.settingsBackup.terms;
+          this.state.timetablePeriods = this.settingsBackup.timetablePeriods;
+          this.settingsBackup = null;
+        }
+        document.getElementById('settingsModalOverlay').classList.remove('open');
+      },
+
+      renderPeriodSettings: function () {
+        const list = document.getElementById('periodSettingsList');
+        list.innerHTML = '';
+
+        this.state.periods.forEach((period, index) => {
+          const div = document.createElement('div');
+          div.style.cssText = 'display:flex; gap:0.5rem; align-items:center; padding:0.5rem; background:var(--bg-tertiary); border-radius:var(--radius-sm);';
+          div.innerHTML = `
+            <input type="hidden" class="period-id" value="${period.id}" data-index="${index}">
+            <input type="text" class="form-control period-name" value="${period.name}" 
+                   style="width:100px; font-size:0.85rem;" placeholder="名前" data-index="${index}">
+            <input type="time" class="form-control period-start" value="${this.formatPeriodTime(period.start)}" 
+                   style="width:100px; font-size:0.85rem;" data-index="${index}">
+            <span style="opacity:0.5;">〜</span>
+            <input type="time" class="form-control period-end" value="${this.formatPeriodTime(period.end)}" 
+                   style="width:100px; font-size:0.85rem;" data-index="${index}">
+            <button class="btn btn-danger" style="padding:4px 8px; font-size:0.75rem;" 
+                    onclick="app.deletePeriod(${index})">×</button>
+          `;
+          list.appendChild(div);
+        });
+      },
+
+      addNewPeriod: function () {
+        const newPeriod = {
+          id: 'p' + (this.state.periods.length + 1),
+          name: '新規',
+          start: '09:00',
+          end: '09:50'
+        };
+        this.state.periods.push(newPeriod);
+        this.renderPeriodSettings();
+      },
+
+      deletePeriod: function (index) {
+        if (confirm('この時限を削除しますか？')) {
+          this.state.periods.splice(index, 1);
+          this.renderPeriodSettings();
+        }
+      },
+
+      // --- Settings Tab Switching ---
+      switchSettingsTab: function (tabName) {
+        // Collect current values before switching (to prevent data loss)
+        if (document.getElementById('settingsTabTerms').style.display !== 'none') {
+          this.collectTermsFromDOM();
+        }
+
+        // Update tab buttons
+        document.querySelectorAll('.settings-tab').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.tab === tabName);
+        });
+        // Show/hide content
+        document.getElementById('settingsTabPeriods').style.display = tabName === 'periods' ? 'block' : 'none';
+        document.getElementById('settingsTabTerms').style.display = tabName === 'terms' ? 'block' : 'none';
+        document.getElementById('settingsTabTimetable').style.display = tabName === 'timetable' ? 'block' : 'none';
+
+        if (tabName === 'terms') {
+          this.renderTermsSettings();
+        }
+        if (tabName === 'timetable') {
+          this.collectTermsFromDOM(); // Ensure we have latest terms for dropdown
+          this.renderTermSelectOptions();
+          this.renderTimetableSettings(0);
+        }
+      },
+
+      // --- Terms Settings ---
+      renderTermsSettings: function () {
+        const list = document.getElementById('termsSettingsList');
+        list.innerHTML = '';
+
+        this.state.terms.forEach((term, index) => {
+          const div = document.createElement('div');
+          div.style.cssText = 'display:flex; gap:0.5rem; align-items:center; padding:0.5rem; background:var(--bg-tertiary); border-radius:var(--radius-sm); flex-wrap:wrap;';
+
+          // Convert ISO dates to YYYY-MM-DD for date inputs
+          const startDate = this.formatDateForInput(term.startDate);
+          const endDate = this.formatDateForInput(term.endDate);
+
+          div.innerHTML = `
+            <input type="hidden" class="term-id" value="${term.id}">
+            <input type="text" class="form-control term-name" value="${term.name}" 
+                   style="width:100px; font-size:0.85rem;" placeholder="名前"
+                   onchange="app.updateTermField(${index}, 'name', this.value)">
+            <input type="date" class="form-control term-start" value="${startDate}" 
+                   style="width:130px; font-size:0.85rem;"
+                   onchange="app.updateTermField(${index}, 'startDate', this.value)">
+            <span style="opacity:0.5;">〜</span>
+            <input type="date" class="form-control term-end" value="${endDate}" 
+                   style="width:130px; font-size:0.85rem;"
+                   onchange="app.updateTermField(${index}, 'endDate', this.value)">
+            <button class="btn btn-danger" style="padding:4px 8px; font-size:0.75rem;" 
+                    onclick="app.deleteTerm(${index})">×</button>
+          `;
+          list.appendChild(div);
+        });
+      },
+
+      // Helper: format date for HTML date input (YYYY-MM-DD)
+      formatDateForInput: function (dateStr) {
+        if (!dateStr) return '';
+        // If already in YYYY-MM-DD format
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+        // If in ISO format (2026-01-07T00:00:00.000Z)
+        if (dateStr.includes('T')) {
+          return dateStr.split('T')[0];
+        }
+        // Try to parse as Date
+        try {
+          const d = new Date(dateStr);
+          if (!isNaN(d.getTime())) {
+            return d.toISOString().split('T')[0];
+          }
+        } catch (e) { }
+        return '';
+      },
+
+      updateTermField: function (index, field, value) {
+        if (this.state.terms[index]) {
+          this.state.terms[index][field] = value;
+        }
+      },
+
+      addNewTerm: function () {
+        // First collect current values from DOM
+        this.collectTermsFromDOM();
+
+        const newTerm = {
+          id: 'term_' + Date.now(),
+          name: '新学期',
+          startDate: '',
+          endDate: ''
+        };
+        this.state.terms.push(newTerm);
+        this.renderTermsSettings();
+      },
+
+      // Helper: collect term values from DOM inputs
+      collectTermsFromDOM: function () {
+        const termIds = document.querySelectorAll('.term-id');
+        const termNames = document.querySelectorAll('.term-name');
+        const termStarts = document.querySelectorAll('.term-start');
+        const termEnds = document.querySelectorAll('.term-end');
+
+        termIds.forEach((idInput, i) => {
+          const id = idInput.value;
+          const term = this.state.terms.find(t => t.id === id);
+          if (term) {
+            term.name = termNames[i].value;
+            term.startDate = termStarts[i].value;
+            term.endDate = termEnds[i].value;
+          }
+        });
+      },
+
+      deleteTerm: function (index) {
+        // First collect current values
+        this.collectTermsFromDOM();
+
+        if (confirm('この期間を削除しますか？関連する時間割も削除されます。')) {
+          const termId = this.state.terms[index].id;
+          // Remove associated timetable entries
+          this.state.timetablePeriods = this.state.timetablePeriods.filter(t => t.termId !== termId);
+          this.state.terms.splice(index, 1);
+          this.renderTermsSettings();
+        }
+      },
+
+      // Get current active term based on today's date
+      getActiveTerm: function () {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        return this.state.terms.find(term => {
+          if (!term.startDate || !term.endDate) return false;
+          const start = this.parseDateLocal(term.startDate);
+          const end = this.parseDateLocal(term.endDate);
+          if (!start || !end) return false;
+          end.setHours(23, 59, 59, 999);
+          return today >= start && today <= end;
+        }) || null;
+      },
+
+      // Helper: parse date string to local Date object at midnight
+      parseDateLocal: function (dateStr) {
+        if (!dateStr) return null;
+        // If ISO format with T, extract just the date part
+        if (dateStr.includes('T')) {
+          dateStr = dateStr.split('T')[0];
+        }
+        // Parse as YYYY-MM-DD in local timezone
+        const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (match) {
+          return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+        }
+        return null;
+      },
+
+      // --- Timetable Term Selector ---
+      currentTimetableTerm: null,
+
+      renderTermSelectOptions: function () {
+        const select = document.getElementById('timetableTermSelect');
+        select.innerHTML = '';
+
+        if (this.state.terms.length === 0) {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = '(期間を先に設定してください)';
+          select.appendChild(opt);
+          return;
+        }
+
+        this.state.terms.forEach(term => {
+          const opt = document.createElement('option');
+          opt.value = term.id;
+          opt.textContent = term.name;
+          select.appendChild(opt);
+        });
+
+        // Select first or current
+        if (this.currentTimetableTerm) {
+          select.value = this.currentTimetableTerm;
+        } else if (this.state.terms.length > 0) {
+          this.currentTimetableTerm = this.state.terms[0].id;
+        }
+      },
+
+      switchTimetableTerm: function () {
+        // Collect current timetable data before switching
+        this.collectTimetableFromDOM();
+
+        const select = document.getElementById('timetableTermSelect');
+        this.currentTimetableTerm = select.value;
+        this.renderTimetableSettings(this.currentTimetableDay);
+      },
+
+      // --- Timetable Settings ---
+      currentTimetableDay: 0,
+
+      switchTimetableDay: function (dayIndex) {
+        // Collect current timetable data before switching
+        this.collectTimetableFromDOM();
+
+        this.currentTimetableDay = dayIndex;
+        document.querySelectorAll('.timetable-day').forEach(btn => {
+          btn.classList.toggle('active', parseInt(btn.dataset.day) === dayIndex);
+        });
+        this.renderTimetableSettings(dayIndex);
+      },
+
+      // Helper: collect timetable values from current DOM inputs
+      collectTimetableFromDOM: function () {
+        const timetableInputs = document.querySelectorAll('.timetable-subject');
+        const classnameInputs = document.querySelectorAll('.timetable-classname');
+
+        timetableInputs.forEach((input, i) => {
+          const periodId = input.dataset.periodId;
+          const day = parseInt(input.dataset.day);
+          const termId = input.dataset.termId;
+          const subject = input.value.trim();
+          const className = classnameInputs[i] ? classnameInputs[i].value.trim() : '';
+
+          // Find or create entry (now including termId in match)
+          const existingIdx = this.state.timetablePeriods.findIndex(t =>
+            t.periodId === periodId && parseInt(t.dayOfWeek) === day && t.termId === termId
+          );
+
+          if (subject) {
+            const entry = {
+              id: `tt_${termId}_${periodId}_${day}`,
+              termId: termId,
+              periodId: periodId,
+              dayOfWeek: day,
+              subject: subject,
+              className: className
+            };
+            if (existingIdx >= 0) {
+              this.state.timetablePeriods[existingIdx] = entry;
+            } else {
+              this.state.timetablePeriods.push(entry);
+            }
+          } else if (existingIdx >= 0) {
+            // Remove empty entries
+            this.state.timetablePeriods.splice(existingIdx, 1);
+          }
+        });
+      },
+
+      clearAllTimetable: function () {
+        const termId = this.currentTimetableTerm;
+        if (!termId) {
+          alert('期間が選択されていません');
+          return;
+        }
+
+        const term = this.state.terms.find(t => t.id === termId);
+        const termName = term ? term.name : termId;
+
+        if (!confirm(`「${termName}」の時間割を全て削除しますか？\n（月〜金、全時限の授業が削除されます）`)) {
+          return;
+        }
+
+        // Remove all timetable entries for this term
+        this.state.timetablePeriods = this.state.timetablePeriods.filter(t => t.termId !== termId);
+
+        // Re-render current day
+        this.renderTimetableSettings(this.currentTimetableDay);
+
+        alert('時間割を削除しました。「保存」ボタンを押すと確定されます。');
+      },
+
+      renderTimetableSettings: function (dayIndex) {
+        const list = document.getElementById('timetableSettingsList');
+        list.innerHTML = '';
+
+        const termId = this.currentTimetableTerm;
+        if (!termId) {
+          list.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem;">期間を先に「📅 期間」タブで設定してください</p>';
+          return;
+        }
+
+        this.state.periods.forEach((period, pIndex) => {
+          // Find existing timetable entry for this term/day/period
+          const existing = this.state.timetablePeriods.find(t =>
+            t.periodId === period.id && parseInt(t.dayOfWeek) === dayIndex && t.termId === termId
+          );
+          const subjectName = existing ? existing.subject : '';
+          const className = existing ? (existing.className || '') : '';
+
+          const div = document.createElement('div');
+          div.style.cssText = 'display:flex; gap:0.5rem; align-items:center; padding:0.5rem; background:var(--bg-tertiary); border-radius:var(--radius-sm);';
+          div.innerHTML = `
+            <span style="width:70px; font-size:0.85rem; color:var(--text-secondary);">${period.name}</span>
+            <input type="text" class="form-control timetable-subject" 
+                   value="${subjectName}" 
+                   data-period-id="${period.id}" 
+                   data-day="${dayIndex}"
+                   data-term-id="${termId}"
+                   style="flex:1; font-size:0.85rem;" 
+                   placeholder="授業名（例: 数学I）"
+                   onchange="app.updateTimetableField('${termId}', '${period.id}', ${dayIndex}, 'subject', this.value)">
+            <input type="text" class="form-control timetable-classname" 
+                   value="${className}" 
+                   data-period-id="${period.id}" 
+                   data-day="${dayIndex}"
+                   data-term-id="${termId}"
+                   style="width:80px; font-size:0.85rem;" 
+                   placeholder="クラス"
+                   onchange="app.updateTimetableField('${termId}', '${period.id}', ${dayIndex}, 'className', this.value)">
+          `;
+          list.appendChild(div);
+        });
+      },
+
+      updateTimetableField: function (termId, periodId, dayIndex, field, value) {
+        const existingIdx = this.state.timetablePeriods.findIndex(t =>
+          t.termId === termId && t.periodId === periodId && parseInt(t.dayOfWeek) === dayIndex
+        );
+
+        if (existingIdx >= 0) {
+          this.state.timetablePeriods[existingIdx][field] = value;
+        } else if (value.trim()) {
+          // Create new entry if value is not empty
+          this.state.timetablePeriods.push({
+            id: `tt_${termId}_${periodId}_${dayIndex}`,
+            termId: termId,
+            periodId: periodId,
+            dayOfWeek: dayIndex,
+            subject: field === 'subject' ? value : '',
+            className: field === 'className' ? value : ''
+          });
+        }
+      },
+
+      saveSettings: function () {
+        // Collect period data from inputs (only if periods tab DOM exists)
+        const periodIds = document.querySelectorAll('.period-id');
+        const periodNames = document.querySelectorAll('.period-name');
+        const periodStarts = document.querySelectorAll('.period-start');
+        const periodEnds = document.querySelectorAll('.period-end');
+
+        // Only update periods if DOM elements exist (tab is visible)
+        if (periodIds.length > 0) {
+          const updatedPeriods = [];
+          periodIds.forEach((idInput, i) => {
+            updatedPeriods.push({
+              id: idInput.value,
+              name: periodNames[i].value,
+              start: periodStarts[i].value,
+              end: periodEnds[i].value
+            });
+          });
+          this.state.periods = updatedPeriods;
+        }
+        // If DOM is empty, keep existing state.periods
+
+        // Collect terms data using helper
+        this.collectTermsFromDOM();
+
+        // Collect current day's timetable data using helper
+        this.collectTimetableFromDOM();
+
+        // Save all data to localStorage
+        this.saveToLocalStorage();
+
+        this.renderGrid();
+
+        // Clear backup before closing modal (so saved changes are not reverted)
+        this.settingsBackup = null;
+        this.closeSettingsModal();
+
+        alert('設定を保存しました');
+      },
+
+      formatDate: function (date) {
+        return date.toISOString().split('T')[0];
+      },
+
+      generateId: function () {
+        return Math.random().toString(36).substring(2, 9);
+      },
+
+      exportData: function () {
+        const data = {
+          events: this.state.events,
+          todos: this.state.todos,
+          periods: this.state.periods,
+          terms: this.state.terms,
+          timetablePeriods: this.state.timetablePeriods,
+          settings: [{ key: 'showWeekend', value: String(this.state.showWeekend) }],
+          exportedAt: new Date().toISOString()
+        };
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `planner-backup-${this.formatDate(new Date())}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+
+      onDateChange: function () { },
+
+      importData: function (input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        const self = this;
+        reader.onload = function (e) {
+          try {
+            const data = JSON.parse(e.target.result);
+            if (confirm('データを読み込みますか？\n※ 現在のデータは上書きされます')) {
+              self.state.events = data.events || [];
+              self.state.todos = (data.todos || []).map((t, i) => ({ ...t, order: t.order || i }));
+              self.state.periods = data.periods || self.getDefaultPeriods();
+              self.state.terms = data.terms || [];
+              self.state.timetablePeriods = data.timetablePeriods || [];
+
+              const weekendSetting = (data.settings || []).find(s => s.key === 'showWeekend');
+              if (weekendSetting) self.state.showWeekend = (weekendSetting.value === 'true');
+
+              self.saveToLocalStorage();
+              self.renderAll();
+              alert('データを読み込みました！');
+            }
+          } catch (err) {
+            alert('JSONファイルの読み込みに失敗しました: ' + err.message);
+          }
+        };
+        reader.readAsText(file);
+        input.value = '';
+      }
+    };
+
+    window.onload = function () {
+      app.init();
+    };
+  </script>
+</body>
+
+</html>
